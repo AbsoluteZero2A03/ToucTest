@@ -11,11 +11,18 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntity;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
@@ -40,19 +47,41 @@ public class NetworkingTask extends AsyncTask<String,Void,HttpResponse> {
 */
         HttpEntity httpEntity;
         HttpPost httpPost = new HttpPost(urlStr[0]);
+        MultipartEntity multipartEntity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+        String boundary = "------bound------";
+        httpPost.setHeader("Content-Type", "multipart/form-data; boundary="+boundary);
         for (NameValuePair n : params) {
             if (n.getName() == "picture") {
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inSampleSize=4;
-                Bitmap bm = BitmapFactory.decodeFile(n.getValue(),options);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                bm.compress(Bitmap.CompressFormat.JPEG,40,baos);
-                byte[] byteImage_photo = baos.toByteArray();
-                params.add(new BasicNameValuePair("picture_data", Base64.encodeToString(byteImage_photo, Base64.DEFAULT)));
+                File picFile = new File(n.getValue());
+                /*FileInputStream fis;
+                byte[] data = new byte[(int) picFile.length()];
+
+                try {
+                    fis = new FileInputStream(picFile);
+                    fis.read(data);
+                    fis.close();
+                } catch (Exception e) {
+
+
+                }*/
+                //BitmapFactory.Options options = new BitmapFactory.Options();
+                //options.inSampleSize=4;
+                //Bitmap bm = BitmapFactory.decodeByteArray(data,0,(int) picFile.length());
+                //ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                //bm.compress(Bitmap.CompressFormat.JPEG,40,baos);
+                //byte[] byteImage_photo = baos.toByteArray();
+                multipartEntity.addPart(n.getName(), new FileBody(picFile));
+            } else {
+                try {
+                    multipartEntity.addPart(n.getName(), new StringBody(n.getValue()));
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
             }
         }
+        httpPost.setEntity(multipartEntity);
+
         try {
-            httpPost.setEntity(new UrlEncodedFormEntity(params));
             return httpClient.execute(httpPost);
         } catch (Exception e) {
             e.printStackTrace();
